@@ -3,6 +3,9 @@ import os
 import shutil
 import csv
 
+from database import SessionLocal
+from models.song import SongAnalysis
+
 from ml.extract_features import extract_audio_features
 from services.visualization import (
     generate_waveform,
@@ -59,7 +62,6 @@ async def upload_audio(file: UploadFile = File(...)):
 
         writer = csv.writer(csvfile)
 
-        # Write header only once
         if not file_exists:
             writer.writerow([
                 "Song",
@@ -80,6 +82,28 @@ async def upload_audio(file: UploadFile = File(...)):
             analysis["zcr"],
             analysis["spectral_centroid"]
         ])
+
+    # -----------------------------
+    # Save results to PostgreSQL
+    # -----------------------------
+    db = SessionLocal()
+
+    try:
+        song = SongAnalysis(
+            song=file.filename,
+            duration=analysis["duration"],
+            bpm=analysis["tempo"],   # use "tempo" because that's what your analysis returns
+            sample_rate=analysis["sample_rate"],
+            rms=analysis["rms"],
+            zcr=analysis["zcr"],
+            spectral_centroid=analysis["spectral_centroid"]
+        )
+
+        db.add(song)
+        db.commit()
+
+    finally:
+        db.close()
 
     # Return response
     return {
