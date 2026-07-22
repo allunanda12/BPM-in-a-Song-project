@@ -53,9 +53,10 @@ async def upload_audio(file: UploadFile = File(...)):
     generate_waveform(filepath, waveform_path)
     generate_spectrogram(filepath, spectrogram_path)
 
-    # -----------------------------
-    # Save results to CSV
-    # -----------------------------
+    # =====================================
+    # Save results to CSV (Optional Backup)
+    # =====================================
+
     file_exists = os.path.isfile(CSV_FILE)
 
     with open(CSV_FILE, mode="a", newline="", encoding="utf-8") as csvfile:
@@ -83,16 +84,18 @@ async def upload_audio(file: UploadFile = File(...)):
             analysis["spectral_centroid"]
         ])
 
-    # -----------------------------
-    # Save results to PostgreSQL
-    # -----------------------------
+    # =====================================
+    # Save results to PostgreSQL Database
+    # =====================================
+
     db = SessionLocal()
 
     try:
+
         song = SongAnalysis(
             song=file.filename,
             duration=analysis["duration"],
-            bpm=analysis["tempo"],   # use "tempo" because that's what your analysis returns
+            bpm=analysis["tempo"],
             sample_rate=analysis["sample_rate"],
             rms=analysis["rms"],
             zcr=analysis["zcr"],
@@ -101,11 +104,19 @@ async def upload_audio(file: UploadFile = File(...)):
 
         db.add(song)
         db.commit()
+        db.refresh(song)
+
+    except Exception as e:
+        db.rollback()
+        print("Database Error:", e)
 
     finally:
         db.close()
 
-    # Return response
+    # =====================================
+    # Return Response
+    # =====================================
+
     return {
         "status": "success",
         "filename": file.filename,
