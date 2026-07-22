@@ -1,0 +1,7 @@
+results.csv
+uploads/
+__pycache__/
+*.pyc
+check_data.py
+create_table.py
+test_db.py
