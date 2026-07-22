@@ -4,10 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routes.upload import router as upload_router
 
+# NEW IMPORTS
+from database import engine
+from models.song import Base
+
 app = FastAPI(
     title="BeatSense AI",
     version="1.0.0"
 )
+
+# CREATE TABLES IF THEY DON'T EXIST
+Base.metadata.create_all(bind=engine)
 
 # Enable CORS
 app.add_middleware(
